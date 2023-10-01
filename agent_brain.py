@@ -15,9 +15,9 @@ class Agent:
         self.C = []
         self.Y = []
         self.area = 1
-        self.alpha = 0.8
-        self.gamma = 0.5
-        self.epsilon0 = 0.3
+        self.alpha = 0.9
+        self.gamma = 0.7
+        self.epsilon0 = 10.1
         self.episodes = 5000
         self.success_episode = 0
         self.sum_reward_list = []
@@ -27,7 +27,7 @@ class Agent:
         self.world = [[(i,j) for j in range(self.n)] for i in range(self.n)]
         
         # self.stone_list = [(10,5),(20,15)]
-        self.stone_list = [(10, i) for i in range(20)]
+        self.stone_list = [(10, i) for i in range(25)]
         self.action = ["up", "down", "left", "right","left_up","left_down","right_up","right_down"]
         self.q_table = [[[0 for j in range(len(self.world))] for i in range(len(self.world))] for k in range(len(self.action))]
         self.policy = [[0 for j in range(len(self.world))] for i in range(len(self.world))]
@@ -69,56 +69,58 @@ class Agent:
             plt.savefig("grid.jpg", dpi=600)
             plt.show()
 
-            
 
-
-    def action_result(self, action_index):
+    def action_result(self, action_index, state):
         action = self.action[action_index]
         max_trick = self.n-1
         if action == "up":
-            if self.current_state[1] == max_trick:
-                return self.current_state
+            if state[1] == max_trick:
+                return state
             else:
-                return (self.current_state[0], self.current_state[1]+1)
+                return (state[0], state[1]+1)
         elif action == "down":
-            if self.current_state[1] == 0:
-                return self.current_state
+            if state[1] == 0:
+                return state
             else:
-                return (self.current_state[0], self.current_state[1]-1)
+                return (state[0], state[1]-1)
         elif action == "left":
-            if self.current_state[0] == 0:
-                return self.current_state
+            if state[0] == 0:
+                return state
             else:
-                return (self.current_state[0]-1, self.current_state[1])
+                return (state[0]-1, state[1])
         elif action == "right":
-            if self.current_state[0] == max_trick:
-                return self.current_state
+            if state[0] == max_trick:
+                return state
             else:
-                return (self.current_state[0]+1, self.current_state[1])
+                return (state[0]+1, state[1])
         elif action == "left_up":
-            if self.current_state[0] == 0 or self.current_state[1] == max_trick:
-                return self.current_state
+            if state[0] == 0 or state[1] == max_trick:
+                return state
             else:
-                return (self.current_state[0]-1,self.current_state[1]+1)
+                return (state[0]-1,state[1]+1)
         elif action == "left_down":
-            if self.current_state[0] == 0 or self.current_state[1] == 0:
-                return self.current_state
+            if state[0] == 0 or state[1] == 0:
+                return state
             else:
-                return (self.current_state[0] - 1, self.current_state[1] - 1)
+                return (state[0] - 1, state[1] - 1)
         elif action == "right_up":
-            if self.current_state[0] == max_trick or self.current_state[1] == max_trick:
-                return self.current_state
+            if state[0] == max_trick or state[1] == max_trick:
+                return state
             else:
-                return (self.current_state[0] + 1, self.current_state[1] + 1)
+                return (state[0] + 1, state[1] + 1)
         elif action == "right_down":
-            if self.current_state[0] == max_trick or self.current_state[1] == 0:
-                return self.current_state
+            if state[0] == max_trick or state[1] == 0:
+                return state
             else:
-                return (self.current_state[0] + 1, self.current_state[1] - 1)
+                return (state[0] + 1, state[1] - 1)
         else:
             raise IOError
 
-    def get_area(self, area,successepisode,C_list):
+    def get_area(self):
+        area = self.area
+        successepisode = self.success_episode
+        C_list = self.C
+
         c = 0
         if (successepisode == 0):
             area += 1
@@ -131,17 +133,18 @@ class Agent:
         return area
 
 
-    def get_areareward(self, start_point,final_point,state,area):
-        ES = (final_point[0] - start_point[0], final_point[1] - start_point[1])
+    def get_areareward(self, next_state):
+        
+        ES = (self.final_position[0] - self.start_position[0], self.final_position[1] - self.start_position[1])
         ES2 = ES[0] ** 2 + ES[1] ** 2
 
-        EP = (final_point[0] - state[0], final_point[1] - state[1])
+        EP = (self.final_position[0] - next_state[0], self.final_position[1] - next_state[1])
         EP2 = EP[0] ** 2 + EP[1] ** 2
         ES_EP = ES[0] * EP[0] + ES[1] * EP[1]
         ES_EP2 = ES_EP ** 2
 
         distance = (EP2 - ES_EP2 / ES2)**0.5
-        if distance < area:
+        if distance < self.area:
             area_reward = 0
         else:
             area_reward = -10
@@ -150,21 +153,23 @@ class Agent:
 
 
 
-    def get_reward(self, state,start_point,final_point, stonelist, currentstate,area):
-        areareward = self.get_areareward(start_point,final_point,state,area)
-
-        if state == currentstate:
+    def get_reward(self, next_state):
+        areareward = self.get_areareward(next_state)
+        # print("areareward : ",areareward)
+        if next_state == self.current_state:
             return -3+areareward
 
-        if state == final_point:
+        if next_state == self.final_position:
             return 10+areareward
 
-        elif state in stonelist:
+        elif next_state in self.stone_list:
             return -10+areareward
         else:
             return -1+areareward
 
-    def get_maxq(self, qtable, state):
+    
+    def get_maxq(self, state):
+        """ current ve next icin farkli olabilir """
         temp = []
         index = []
         index_list = [0,1,2,3,4,5,6,7]
@@ -177,7 +182,7 @@ class Agent:
             index_list.remove(index[m])
 
         for i in index_list:
-            temp.append(qtable[i][state[0]][state[1]])
+            temp.append(self.q_table[i][state[0]][state[1]])
 
         maxone = max(temp)
         arg = np.argmax(temp)
@@ -185,12 +190,13 @@ class Agent:
         return maxone, argmax
 
 
-    def get_randaction(self, current_matrix,state):
+    def get_randaction(self):
+        
         index02 = []
         index_list02 = [0,1,2,3,4,5,6,7]
 
         for i in range(len(index_list02)):
-            if current_matrix[i][state[0]][state[1]] < 0:
+            if self.matrix[i][self.current_state[0]][self.current_state[1]] < 0:
                 index02.append(i)
 
         for j in range(len(index02)):
@@ -202,15 +208,15 @@ class Agent:
         return actionindex
 
     def get_epsilon(self,fuction_epsilon0,function_episode,function_episodes):
-
-        if function_episode <= function_episodes*0.1854:
+        
+        if function_episode < function_episodes*0.1854:
             epsilon = fuction_epsilon0*(1-function_episode/(function_episodes*0.1854))**2
         else:
             epsilon = 0.01
 
-        return epsilon
+        return max(0.01,epsilon)
 
-    def reset(self):
+    def reset(self, episode):
         self.current_state = self.start_position
         self.save = [self.current_state]
 
@@ -218,26 +224,33 @@ class Agent:
         self.y_step = 0
         self.corner = 0
         self.actionindex = []
-        self.area = self.get_area(self.area, self.success_episode, self.C)
+        # self.area = self.get_area(self.area, self.success_episode, self.C)
+
+        if (episode % 100 == 0):
+            self.area = self.get_area()
+
         self.epsilon = self.get_epsilon(self.epsilon0, episode, self.episodes)
 
-    def run(self):
+    def run(self, episode):
+        
+        counter = 0
         while True:
+            counter +=1
             if random.randint(1,100)/100 > self.epsilon:
                 action_index = self.policy[self.current_state[0]][self.current_state[1]]
             else:
-                action_index = self.get_randaction(self.matrix,self.current_state)
+                action_index = self.get_randaction()
 
-            next_state = self.action_result(action_index)
-            reward = self.get_reward(next_state, self.start_position, self.final_position, self.stone_list, self.current_state, self.area)
-
-            maxone, _ = self.get_maxq(self.q_table, next_state)
+            next_state = self.action_result(action_index, self.current_state)
+            reward = self.get_reward(next_state)
+            
+            maxone, _ = self.get_maxq(next_state)
             self.q_table[action_index][self.current_state[0]][self.current_state[1]] += self.alpha*(reward + self.gamma*maxone - self.q_table[action_index][self.current_state[0]][self.current_state[1]])
 
-            _, argmax = self.get_maxq(self.q_table, self.current_state)
+            _, argmax = self.get_maxq(self.current_state)
             self.policy[self.current_state[0]][self.current_state[1]] = argmax
 
-
+            # @TODO: GEREKLİ Mİ ?
             if next_state == self.current_state:
                 self.y_step += 0
             elif action_index in [0, 1, 2, 3]:
@@ -252,8 +265,12 @@ class Agent:
             self.save.append(self.current_state)
             self.reward_list.append(reward)
 
-            if reward == -10 or reward == -20:
+
+            if reward == -10 or reward <= -20:
                 self.matrix[action_index][test_temp[0]][test_temp[1]] = -1
+                # arw = self.get_areareward(self.current_state)
+                # print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  ARW: ",arw)
+                break
 
             if reward == 10:
                 sum_reward = 0
@@ -275,7 +292,8 @@ class Agent:
                         self.C.append(self.corner)
 
                 self.Y.append(self.y_step)
-
+                arw = self.get_areareward(self.current_state)
+                print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  ARW: ",arw)
                 break
 
         
@@ -286,14 +304,19 @@ class Agent:
         res = [state]
         for i in range(100):
             a_index = self.policy[state[0]][state[1]]
-            next_state = self.action_result(a_index)
+            # print("state : ",state)
+            # print("a_index: ",a_index)
+            
+            next_state = self.action_result(a_index, state)
             res.append(next_state)
-
-            if next_state == self.final_position or True:
+            # print("....  ",i," - ", a_index)
+            if next_state == self.final_position:
+                # print("next_state: ",next_state , "  self.final_position: ",self.final_position)
                 print(" ... Final Position ...")
                 self.plot_world(res)
                 break
             state = next_state
+            
 
 if __name__ == "__main__":
 
@@ -302,12 +325,16 @@ if __name__ == "__main__":
     for episode in range(agent.episodes):
         
         # RESET
-        print("Episode : " ,episode)
-        agent.reset()
-        counter = 0
         
-        agent.run()
+        agent.reset(episode)
+        if episode % 100 == 1:
+            agent.inference()
+        print("Episode : " ,episode, "   area : ",agent.area, "  REWARD: ",agent.get_reward(agent.current_state), " epsilon: ",agent.epsilon)
+        agent.run(episode)
+
+
 
     agent.inference()
             
     
+# 758 0.0099
