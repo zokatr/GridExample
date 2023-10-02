@@ -11,7 +11,7 @@ class Agent:
     def __init__(self,):
         print("Init Brain")
 
-        self.n = 30
+        self.n = 50
         self.C = []
         self.Y = []
         self.area = 1
@@ -22,12 +22,15 @@ class Agent:
         self.success_episode = 0
         self.sum_reward_list = []
         self.start_position = (0, 0)
-        self.final_position = (29, 29)
+        self.final_position = (49, 49)
         self.current_state = self.start_position
         self.world = [[(i,j) for j in range(self.n)] for i in range(self.n)]
         
         # self.stone_list = [(10,5),(20,15)]
-        self.stone_list = [(10, i) for i in range(25)]
+        stone_list_1 = [(10, i) for i in range(25)]
+        stone_list_2 = [(20, self.n-i) for i in range(35)]
+        stone_list_3 = [(25, i) for i in range(35)]
+        self.stone_list = stone_list_1 + stone_list_2 + stone_list_3
         self.action = ["up", "down", "left", "right","left_up","left_down","right_up","right_down"]
         self.q_table = [[[0 for j in range(len(self.world))] for i in range(len(self.world))] for k in range(len(self.action))]
         self.policy = [[0 for j in range(len(self.world))] for i in range(len(self.world))]
@@ -327,8 +330,8 @@ if __name__ == "__main__":
         # RESET
         
         agent.reset(episode)
-        if episode % 100 == 1:
-            agent.inference()
+        # if episode % 5000 == 1:
+        #     agent.inference()
         print("Episode : " ,episode, "   area : ",agent.area, "  REWARD: ",agent.get_reward(agent.current_state), " epsilon: ",agent.epsilon)
         agent.run(episode)
 
