@@ -11,7 +11,7 @@ class Agent:
     def __init__(self,):
         print("Init Brain")
 
-        self.n = 50
+        self.n = 30
         self.C = []
         self.Y = []
         self.area = 1
@@ -21,16 +21,16 @@ class Agent:
         self.episodes = 5000
         self.success_episode = 0
         self.sum_reward_list = []
-        self.start_position = (0, 0)
-        self.final_position = (49, 49)
+        self.start_position = (3, 3)
+        self.final_position = (self.n-1, self.n-1)
         self.current_state = self.start_position
         self.world = [[(i,j) for j in range(self.n)] for i in range(self.n)]
         
         # self.stone_list = [(10,5),(20,15)]
-        stone_list_1 = [(10, i) for i in range(25)]
-        stone_list_2 = [(20, self.n-i) for i in range(35)]
-        stone_list_3 = [(25, i) for i in range(35)]
-        self.stone_list = stone_list_1 + stone_list_2 + stone_list_3
+        stone_list_1 = [(10, i) for i in range(20)]
+        stone_list_2 = [(20, self.n-i) for i in range(20)]
+        stone_list_3 = [(25, i) for i in range(20)]
+        self.stone_list = stone_list_1 #+ stone_list_2 + stone_list_3
         self.action = ["up", "down", "left", "right","left_up","left_down","right_up","right_down"]
         self.q_table = [[[0 for j in range(len(self.world))] for i in range(len(self.world))] for k in range(len(self.action))]
         self.policy = [[0 for j in range(len(self.world))] for i in range(len(self.world))]
@@ -44,6 +44,12 @@ class Agent:
         self.actionindex = []
         self.area = 1
         self.epsilon = 0.3
+
+        self.unvisible_area = 0
+
+        self.obstacles = pygame.sprite.Group()
+        for pos in self.stone_list:
+            self.obstacles.add(Obstacle(pos[0], pos[1]))
 
     def plot_world(self, result=None):
         
@@ -159,6 +165,7 @@ class Agent:
     def get_reward(self, next_state):
         areareward = self.get_areareward(next_state)
         # print("areareward : ",areareward)
+
         if next_state == self.current_state:
             return -3+areareward
 
@@ -166,9 +173,13 @@ class Agent:
             return 10+areareward
 
         elif next_state in self.stone_list:
-            return -10+areareward
+            return -10+areareward 
+        
+        elif self.unvisible_area>0:
+            self.unvisible_area = 0
+            return -2+areareward 
         else:
-            return -1+areareward
+            return -1+areareward 
 
     
     def get_maxq(self, state):
@@ -176,9 +187,11 @@ class Agent:
         temp = []
         index = []
         index_list = [0,1,2,3,4,5,6,7]
-
+        c = 0
         for j in range(len(self.matrix)):
             if self.matrix[j][state[0]][state[1]] < 0:
+                # c += 1
+                # print(c,"/",len(self.matrix))
                 index.append(j)
 
         for m in range(len(index)):
@@ -187,12 +200,13 @@ class Agent:
         for i in index_list:
             temp.append(self.q_table[i][state[0]][state[1]])
 
+        # if len(temp)<1:
+        #     #@TODO EGER HİC İHTİMAL KALMADI İSE RANDOM ATSIN BİR TANE
         maxone = max(temp)
         arg = np.argmax(temp)
         argmax = index_list[arg]
         return maxone, argmax
-
-
+    
     def get_randaction(self):
         
         index02 = []
@@ -229,10 +243,34 @@ class Agent:
         self.actionindex = []
         # self.area = self.get_area(self.area, self.success_episode, self.C)
 
-        if (episode % 100 == 0):
+        if (episode % 10 == 0):
             self.area = self.get_area()
 
         self.epsilon = self.get_epsilon(self.epsilon0, episode, self.episodes)
+
+    def raycast(self):
+        caster = RayCaster(self.current_state)
+        #@TODO : WINDOW SIZE DUZENLE
+        w_w = 6 #WINDOW_WIDTH // GRID_SIZE
+        w_h = 6 #WINDOW_HEIGHT // GRID_SIZE
+
+        self.unvisible_area = 0
+
+        for x in range(-w_w // 2, w_w // 2 + 1):
+            for y in range(-w_h // 2, w_h // 2 + 1):
+            
+                cell_x = x + self.current_state[0]
+                cell_y = y + self.current_state[1]
+
+                #@TODO: w_w w_h dogru mu ?
+                # print("cell_x : ",cell_x, "  y: ",cell_y, "   ww: ",w_w, "  wh: ",w_h)
+                if cell_x >= 30 or cell_x <= 0 or cell_y >= 30 or cell_y <= 0:
+                    pass
+                else: 
+                    cell = (cell_x,cell_y)
+                    hit_point = caster.cast_to_point([o.rect for o in self.obstacles], cell)
+                    if hit_point:
+                        self.unvisible_area += 1
 
     def run(self, episode):
         
@@ -245,6 +283,7 @@ class Agent:
                 action_index = self.get_randaction()
 
             next_state = self.action_result(action_index, self.current_state)
+            self.raycast()
             reward = self.get_reward(next_state)
             
             maxone, _ = self.get_maxq(next_state)
@@ -253,7 +292,7 @@ class Agent:
             _, argmax = self.get_maxq(self.current_state)
             self.policy[self.current_state[0]][self.current_state[1]] = argmax
 
-            # @TODO: GEREKLİ Mİ ?
+            # @TODO: GEREKLI MI ?
             if next_state == self.current_state:
                 self.y_step += 0
             elif action_index in [0, 1, 2, 3]:
@@ -296,7 +335,7 @@ class Agent:
 
                 self.Y.append(self.y_step)
                 arw = self.get_areareward(self.current_state)
-                print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  ARW: ",arw)
+                print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  unvisible: ",self.unvisible_area)
                 break
 
         

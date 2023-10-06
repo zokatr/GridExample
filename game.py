@@ -33,7 +33,7 @@ NUM_CELLS_Y = SCREEN_HEIGHT // GRID_SIZE
 WINDOW_WIDTH = GRID_SIZE * GRID_WIDTH
 WINDOW_HEIGHT = GRID_SIZE * GRID_HEIGHT
 
-GOAL = [NUM_CELLS_X-1, 1]
+GOAL = [NUM_CELLS_X-1, NUM_CELLS_Y-1]
 
 
 # Sprite groups
@@ -113,7 +113,7 @@ class Vehicle(pygame.sprite.Sprite):
     def get_state(self, obstacles, observation, area):
         """ return new_observation, reward, done """
 
-        new_observation = (self.rect.x, self.rect.y)
+        new_observation = (self.rect.x // GRID_SIZE, self.rect.y // GRID_SIZE)
         p1 = [self.rect.x, self.rect.y]
         # print("p1: ",p1)
         goal_distance = self.distance_to(p1, GOAL)
@@ -146,11 +146,9 @@ class Vehicle(pygame.sprite.Sprite):
     def update(self, action = None, grid=None):
         # action = ["up", "down", "left", "right","left_up","left_down","right_up","right_down"]
         # action index = [up down left right]
-
+        if action == None:
+            return
         # UP - DOWN
-        print("action  : ",action)
-        print("BEFORE UPDATE X : ",self.rect.x)
-        print("BEFORE UPDATE Y : ",self.rect.y)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or action==2: 
             self.rect.x = max(0, self.rect.x - self.speed)
@@ -180,9 +178,6 @@ class Vehicle(pygame.sprite.Sprite):
 
         self.total_steps += 1
 
-        print("AFTER UPDATE X : ",self.rect.x)
-        print("AFTER UPDATE Y : ",self.rect.y)
-
     def update_new(self, action = None, grid = None):
         
         # action index = [up down left right]
@@ -208,7 +203,7 @@ class Vehicle(pygame.sprite.Sprite):
             cell.color = (0, 0, 255)  # draw free window cells
             cell.draw(screen)
 
-    def draw_fov(self, screen, grid):
+    def draw_fov(self, screen, grid, obstacles):
         caster = RayCaster(self.rect.center)
         w_w = WINDOW_WIDTH // GRID_SIZE
         w_h = WINDOW_HEIGHT // GRID_SIZE
@@ -245,6 +240,7 @@ class Obstacle(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        
 
 
 class RayCaster:
@@ -265,6 +261,7 @@ class RayCaster:
 
         for i in range(0, int(ray_length), 1):
             current_point = self.origin + ray * i
+            
             for obs in obstacles:
                 if obs.collidepoint(current_point.x, current_point.y):
                     return current_point
