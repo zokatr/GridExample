@@ -1,11 +1,12 @@
 # GridExample
 Q-Learning Based Risk-aware Path Planning
 
-<div style="margin-bottom: 100px;">
-  <img src="/figures/risk-aware.gif" style="float: left; width: 70%;" />  <img src="/figures/default.gif" style="float: right; width: 70%;" />
-</div>
+| ![Risk Aware](/figures/risk-aware.gif) | ![Default](/figures/default.gif) |
+|:---:|:---:|
+| Risk Aware | Default |
 
-<div>
-  <img src="/figures/Figure_1_risk-aware.png" style="float: right; width: 50%;" />
-  <img src="/figures/Figure_1_def.png" style="float: left; width: 50%;" />
-</div>
+
+| ![Risk Aware](/figures/Figure_1_risk-aware.png) | ![Default](/figures/Figure_1_def.png) |
+|:---:|:---:|
+| Risk Aware | Default |
+
