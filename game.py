@@ -24,14 +24,13 @@ GREEN = (0, 255, 0)
 # Constants
 NUM_OBSTACLE = 10
 GRID_SIZE = 20  # size of each grid cell in pixels
-GRID_WIDTH = 10  # Number of grid cells in width
-GRID_HEIGHT = 10  # Number of grid cells in height
 NUM_CELLS_X = SCREEN_WIDTH // GRID_SIZE
 NUM_CELLS_Y = SCREEN_HEIGHT // GRID_SIZE
 
 # x: 26 - y:20
-WINDOW_WIDTH = GRID_SIZE * GRID_WIDTH
-WINDOW_HEIGHT = GRID_SIZE * GRID_HEIGHT
+WINDOW_SIZE = 6
+WINDOW_WIDTH = WINDOW_SIZE * GRID_SIZE 
+WINDOW_HEIGHT = WINDOW_SIZE * GRID_SIZE
 
 GOAL = [NUM_CELLS_X-1, NUM_CELLS_Y-1]
 
@@ -43,8 +42,8 @@ obstacle_positions = [(1*SCREEN_WIDTH//4, GRID_SIZE*i) for i in range(2*NUM_CELL
 
 
 class Cell:
-    def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, GRID_SIZE, GRID_SIZE)
+    def __init__(self, x, y, size=GRID_SIZE):
+        self.rect = pygame.Rect(x, y, size, size)
         self.color = (255, 255, 255)  # default to white
         
 
@@ -57,27 +56,91 @@ class Cell:
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, self.rect)
 
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, x, y, size=GRID_SIZE):
+        super().__init__()
+        self.image = pygame.Surface([size, size])
+        self.image.fill(RED)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        
+class RayCaster:
+    def __init__(self, origin):
+        self.origin = origin
+    
+    def cast_to_point(self, obstacles, cell_point):
+        """
+        cell_point  : center of casting cell
+        self.origin : vehicle center point
+        """
+        #(150, 170)
+        # print("obstacles: ",obstacles)
+        # print("cell_point: ",cell_point)
+        # print("self.origin: ",self.origin)
+        # print()
+        ray = pygame.math.Vector2(cell_point) - self.origin
+        ray_length = ray.length()
+        if ray.length() < 1e-6:  # if the length is close to zero
+            return None
+        ray.normalize_ip()
+        
+        for i in range(0, int(ray_length), 1):
+            current_point = self.origin + ray * i
+
+            for obs in obstacles:
+                # print("current_point: ",current_point, "     obs: ",obs)
+                if obs.collidepoint(current_point.x, current_point.y):
+                    return current_point
+    
+    def cast_to_cord(self, obstacles, cell_point):
+        """
+        cell_point  : center of casting cell
+        self.origin : vehicle center point
+        """
+        #(150, 170)
+        # print("obstacles: ",obstacles)
+        # print("cell_point: ",cell_point)
+        # print("self.origin: ",self.origin)
+        # print()
+        
+        ray = pygame.math.Vector2(cell_point) - self.origin
+        ray_length = ray.length()
+        if ray.length() < 1e-6:  # if the length is close to zero
+            return None
+        ray.normalize_ip()
+        
+        for i in range(0, int(ray_length), 1):
+            current_point = self.origin + ray * i
+
+            for obs in obstacles:
+                if abs(obs.x - current_point.x)<1 and abs(obs.y - current_point.y)<1:
+                    return current_point
+
+                
+                
+        return None
 
 class Vehicle(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([NUM_CELLS_X, NUM_CELLS_Y])
+        self.image = pygame.Surface([GRID_SIZE, GRID_SIZE])
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
-        self.rect.x = 3 #(SCREEN_WIDTH // 2)
-        self.rect.y = 3 #SCREEN_HEIGHT //2 
-        self.speed = 1
+        self.rect.x = 0 #(SCREEN_WIDTH // 2)
+        self.rect.y = 0 #SCREEN_HEIGHT //2 
+        self.speed = GRID_SIZE
         self.unvisible_area = 0
         self.visited_grid = []
         self.total_steps = 0
-        self.start_point = (3,3)
+        self.start_point = (0,0)
 
         print("Vehicle start x : %d   y: %d"%(self.rect.x, self.rect.y))
 
     def reset(self):
         self.rect = self.image.get_rect()
-        self.rect.x = 3#(SCREEN_WIDTH // 2)
-        self.rect.y = 3#SCREEN_HEIGHT //2
+        self.rect.x = 0#(SCREEN_WIDTH // 2)
+        self.rect.y = 0#SCREEN_HEIGHT //2
         self.total_steps = 0
 
     def distance_to(self, point1, point2):
@@ -89,11 +152,6 @@ class Vehicle(pygame.sprite.Sprite):
         final_point = GOAL
         state = (self.rect.x, self.rect.y)
 
-        # print(start_point)
-        # print(final_point)
-        # print(state)
-        # print(area)
-        # print()
         ES = (final_point[0] - start_point[0], final_point[1] - start_point[1])
         ES2 = ES[0] ** 2 + ES[1] ** 2
 
@@ -151,64 +209,44 @@ class Vehicle(pygame.sprite.Sprite):
         # UP - DOWN
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or action==2: 
-            self.rect.x = max(0, self.rect.x - self.speed)
+            self.rect.x = max(1, self.rect.x - self.speed)
         if keys[pygame.K_RIGHT] or action==3:
             self.rect.x = min(SCREEN_WIDTH-1, self.rect.x + self.speed)
         if keys[pygame.K_UP] or action==1:
-            self.rect.y = max(0, self.rect.y - self.speed)
+            self.rect.y = max(1, self.rect.y - self.speed)
         if keys[pygame.K_DOWN] or action==0:
             self.rect.y = min(SCREEN_HEIGHT-1, self.rect.y + self.speed)
         if action==5:
-            self.rect.x = max(0, self.rect.x - self.speed) # LEFT
-            self.rect.y = max(0, self.rect.y - self.speed) # UP
+            self.rect.x = max(1, self.rect.x - self.speed) # LEFT
+            self.rect.y = max(1, self.rect.y - self.speed) # UP
         if action==4:
-            self.rect.x = max(0, self.rect.x - self.speed) # LEFT
+            self.rect.x = max(1, self.rect.x - self.speed) # LEFT
             self.rect.y = min(SCREEN_HEIGHT-1, self.rect.y + self.speed) # DOWN
         if action==7:
             self.rect.x = min(SCREEN_WIDTH-1, self.rect.x + self.speed) # RIGHT
-            self.rect.y = max(0, self.rect.y - self.speed) # UP
+            self.rect.y = max(1, self.rect.y - self.speed) # UP
         if action==6:
             self.rect.x = min(SCREEN_WIDTH-1, self.rect.x + self.speed) # RIGHT
             self.rect.y = min(SCREEN_HEIGHT-1, self.rect.y + self.speed) # DOWN
         
         current_cell = grid[self.rect.x//GRID_SIZE][self.rect.y//GRID_SIZE]
         self.visited_grid.append(current_cell)
-        if len(self.visited_grid)>30:
-            self.visited_grid.pop(0)
-
-        self.total_steps += 1
-
-    def update_new(self, action = None, grid = None):
-        
-        # action index = [up down left right]
-        if action==2: 
-            self.rect.x = max(0, self.rect.x - self.speed)
-        if action==3:
-            self.rect.x = min(NUM_CELLS_X-1, self.rect.x + self.speed)
-        if action==0:
-            self.rect.y = max(0, self.rect.y - self.speed)
-        if action==1:
-            self.rect.y = min(NUM_CELLS_Y-1, self.rect.y + self.speed)
-        
-        current_cell = grid[self.rect.x//GRID_SIZE][self.rect.y//GRID_SIZE]
-        self.visited_grid.append(current_cell)
-        if len(self.visited_grid)>30:
+        if len(self.visited_grid)>20:
             self.visited_grid.pop(0)
 
         self.total_steps += 1
 
     def draw_path(self, screen):
-        
         for i,cell in enumerate(self.visited_grid):
             cell.color = (0, 0, 255)  # draw free window cells
             cell.draw(screen)
 
     def draw_fov(self, screen, grid, obstacles):
-        caster = RayCaster(self.rect.center)
-        w_w = WINDOW_WIDTH // GRID_SIZE
-        w_h = WINDOW_HEIGHT // GRID_SIZE
-
+        caster = RayCaster((self.rect.x,self.rect.y))
+        w_w = WINDOW_SIZE
+        w_h = WINDOW_SIZE
         self.unvisible_area = 0
+        
         goal_cell = grid[GOAL[0]][ GOAL[1]]
         goal_cell.color = (0,250,250)
         goal_cell.draw(screen)
@@ -217,12 +255,19 @@ class Vehicle(pygame.sprite.Sprite):
             
                 cell_x = x + self.rect.x // GRID_SIZE
                 cell_y = y + self.rect.y // GRID_SIZE
-
+                
+                # print("cell_x: ", cell_x, "   x:  ", x, "    self.rect.x:",self.rect.x)
+                
                 if cell_x >= len(grid) or cell_x <= 0 or cell_y >= len(grid[0]) or cell_y <= 0:
                     pass
-                else: 
+                else:
+                    # print(obstacle)
                     cell = grid[cell_x][cell_y]
+                    # cell = Cell(8,8)
+                    # print("cell.rect.center: ",cell.rect.center)
                     hit_point = caster.cast_to_point([o.rect for o in obstacles], cell.rect.center)
+                    print(hit_point)
+                    # time.sleep(1)
                     if hit_point:
                         cell.darken()
                         cell.draw(screen)
@@ -230,46 +275,65 @@ class Vehicle(pygame.sprite.Sprite):
                     else:
                         cell.color = (200, 200, 255)  # draw free window cells
                         cell.draw(screen)
-                
-
-class Obstacle(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__()
-        self.image = pygame.Surface([GRID_SIZE, GRID_SIZE])
-        self.image.fill(RED)
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        
 
 
-class RayCaster:
-    def __init__(self, origin):
-        self.origin = origin
+
+if __name__ == "__main__":
+    from agent_brain import Agent   
+
+    agent = Agent()
+    vehicle = Vehicle()
+
+    # Set up the screen and clock
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("2D Vehicle Game with Observable Space")
+    clock = pygame.time.Clock()
+    all_sprites = pygame.sprite.Group()
+    obstacles = pygame.sprite.Group()
     
-    def cast_to_point(self, obstacles, cell_point):
-        """
-        cell_point  : center of casting cell
-        self.origin : vehicle center point
-        """
-        
-        ray = pygame.math.Vector2(cell_point) - self.origin
-        ray_length = ray.length()
-        if ray.length() < 1e-6:  # if the length is close to zero
-            return None
-        ray.normalize_ip()
-
-        for i in range(0, int(ray_length), 1):
-            current_point = self.origin + ray * i
-            
-            for obs in obstacles:
-                if obs.collidepoint(current_point.x, current_point.y):
-                    return current_point
-                
-        return None
+    grid = [[Cell(x*GRID_SIZE, y*GRID_SIZE) for y in range(NUM_CELLS_Y)] for x in range(NUM_CELLS_X)]
+    for pos in agent.stone_list:
+        obstacle = Obstacle(pos[0]*GRID_SIZE, pos[1]*GRID_SIZE)
+        all_sprites.add(obstacle)
+        obstacles.add(obstacle)
+    all_sprites.add(vehicle)
     
-# grid = [[Cell(x*GRID_SIZE, y*GRID_SIZE) for y in range(NUM_CELLS_Y)] for x in range(NUM_CELLS_X)]
-# for pos in obstacle_positions:
-#     obstacle = Obstacle(pos[0], pos[1])
-#     all_sprites.add(obstacle)
-#     obstacles.add(obstacle)
+    running = True
+    while running:
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                print("Close ...")
+                running = False
+
+        # Choose Action
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            a_index=2
+        elif keys[pygame.K_RIGHT]:
+            a_index=3
+        elif keys[pygame.K_UP]:
+            a_index=1#0
+        elif keys[pygame.K_DOWN]:
+            a_index=0#1
+        else:
+            a_index=-1
+
+        if a_index>-1:
+            vehicle.update(a_index, grid)
+        
+        # Render Game
+        screen.fill(WHITE)
+        vehicle.draw_fov(screen, grid, obstacles)
+        # vehicle.draw_path(screen)
+        all_sprites.draw(screen)
+
+        print("vehicle.rect    : ",vehicle.rect.x, " , ",vehicle.rect.y)
+        print("vehicle.rect    : ",vehicle.rect.x//GRID_SIZE, " , ",vehicle.rect.y//GRID_SIZE)
+        print("unvisible area  : ",vehicle.unvisible_area)
+        print()
+        pygame.display.flip()
+        clock.tick(10)
+
+    pygame.quit()
+    # sys.exit()

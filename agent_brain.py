@@ -17,20 +17,20 @@ class Agent:
         self.area = 1
         self.alpha = 0.9
         self.gamma = 0.7
-        self.epsilon0 = 10.1
+        self.epsilon0 = 1.1
         self.episodes = 5000
         self.success_episode = 0
         self.sum_reward_list = []
-        self.start_position = (3, 3)
+        self.start_position = (0, 0)
         self.final_position = (self.n-1, self.n-1)
         self.current_state = self.start_position
         self.world = [[(i,j) for j in range(self.n)] for i in range(self.n)]
         
         # self.stone_list = [(10,5),(20,15)]
-        stone_list_1 = [(10, i) for i in range(20)]
-        stone_list_2 = [(20, self.n-i) for i in range(20)]
+        stone_list_1 = [(10, i) for i in range(15)]
+        stone_list_2 = [(20, self.n-i) for i in range(10)]
         stone_list_3 = [(25, i) for i in range(20)]
-        self.stone_list = stone_list_1 #+ stone_list_2 + stone_list_3
+        self.stone_list = stone_list_1 + stone_list_2 + stone_list_3
         self.action = ["up", "down", "left", "right","left_up","left_down","right_up","right_down"]
         self.q_table = [[[0 for j in range(len(self.world))] for i in range(len(self.world))] for k in range(len(self.action))]
         self.policy = [[0 for j in range(len(self.world))] for i in range(len(self.world))]
@@ -46,10 +46,13 @@ class Agent:
         self.epsilon = 0.3
 
         self.unvisible_area = 0
+        self.raycast_list = [[-1 for j in range(self.n)] for i in range(self.n)]
 
         self.obstacles = pygame.sprite.Group()
         for pos in self.stone_list:
-            self.obstacles.add(Obstacle(pos[0], pos[1]))
+            #@TODO: CAST_TO_POINT ICIN 20 ILE CARPTIK KONTROL EDILMELI
+            # self.obstacles.add(Obstacle(pos[0]*20, pos[1]*20))
+            self.obstacles.add(Obstacle(pos[0], pos[1],size=1))
 
     def plot_world(self, result=None):
         
@@ -175,9 +178,9 @@ class Agent:
         elif next_state in self.stone_list:
             return -10+areareward 
         
-        elif self.unvisible_area>0:
+        elif self.unvisible_area>2 and self.unvisible_area<19:
             self.unvisible_area = 0
-            return -2+areareward 
+            return -3+areareward 
         else:
             return -1+areareward 
 
@@ -195,12 +198,15 @@ class Agent:
                 index.append(j)
 
         for m in range(len(index)):
+            # if len(index_list)<2:
+            #     break
             index_list.remove(index[m])
 
         for i in index_list:
             temp.append(self.q_table[i][state[0]][state[1]])
 
         # if len(temp)<1:
+
         #     #@TODO EGER HİC İHTİMAL KALMADI İSE RANDOM ATSIN BİR TANE
         maxone = max(temp)
         arg = np.argmax(temp)
@@ -243,39 +249,54 @@ class Agent:
         self.actionindex = []
         # self.area = self.get_area(self.area, self.success_episode, self.C)
 
-        if (episode % 10 == 0):
+        if (episode % 100 == 0):
             self.area = self.get_area()
 
         self.epsilon = self.get_epsilon(self.epsilon0, episode, self.episodes)
 
     def raycast(self):
+        unvisible_area = self.raycast_list[self.current_state[0]][self.current_state[1]]
+
+        if unvisible_area>-1:
+            return unvisible_area
+        # else:
+        #     print("unvisible_area: ", unvisible_area, "     CALCUALTE NEW AREA")
+
         caster = RayCaster(self.current_state)
         #@TODO : WINDOW SIZE DUZENLE
-        w_w = 6 #WINDOW_WIDTH // GRID_SIZE
-        w_h = 6 #WINDOW_HEIGHT // GRID_SIZE
-
-        self.unvisible_area = 0
-
+        w_w = WINDOW_SIZE
+        w_h = WINDOW_SIZE
+        unvisible_area = 0
         for x in range(-w_w // 2, w_w // 2 + 1):
             for y in range(-w_h // 2, w_h // 2 + 1):
-            
                 cell_x = x + self.current_state[0]
                 cell_y = y + self.current_state[1]
-
-                #@TODO: w_w w_h dogru mu ?
                 # print("cell_x : ",cell_x, "  y: ",cell_y, "   ww: ",w_w, "  wh: ",w_h)
-                if cell_x >= 30 or cell_x <= 0 or cell_y >= 30 or cell_y <= 0:
+                #@TODO: >=N mi yoksa >n mi ?
+                if cell_x >= self.n or cell_x <= 0 or cell_y >= self.n or cell_y <= 0:
                     pass
-                else: 
-                    cell = (cell_x,cell_y)
-                    hit_point = caster.cast_to_point([o.rect for o in self.obstacles], cell)
-                    if hit_point:
-                        self.unvisible_area += 1
-
+                else:
+                    cell = Cell(cell_x,cell_y, size=1)
+                    # cell = Cell(8,5, size=1)
+                    
+                    # print("cell.rect.center: ",cell.rect.center)
+                    hit_point = caster.cast_to_point([o.rect for o in self.obstacles], cell.rect.center)
+                    hit_point2 = caster.cast_to_cord([o.rect for o in self.obstacles], cell.rect.center)
+                    # time.sleep(1)
+                    if hit_point2:
+                        # print("cell.rect.center: ",cell.rect.center,"    hit_point: ",hit_point)
+                        # print("HIT HIT HIT")
+                        unvisible_area += 1
+                    
+        self.raycast_list[self.current_state[0]][self.current_state[1]] = unvisible_area
+        
+        return unvisible_area
+                
     def run(self, episode):
         
         counter = 0
         while True:
+            
             counter +=1
             if random.randint(1,100)/100 > self.epsilon:
                 action_index = self.policy[self.current_state[0]][self.current_state[1]]
@@ -283,7 +304,8 @@ class Agent:
                 action_index = self.get_randaction()
 
             next_state = self.action_result(action_index, self.current_state)
-            self.raycast()
+            self.unvisible_area = self.raycast()
+            # print("unvisible: ",self.unvisible_area)
             reward = self.get_reward(next_state)
             
             maxone, _ = self.get_maxq(next_state)
@@ -311,7 +333,7 @@ class Agent:
             if reward == -10 or reward <= -20:
                 self.matrix[action_index][test_temp[0]][test_temp[1]] = -1
                 # arw = self.get_areareward(self.current_state)
-                # print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  ARW: ",arw)
+                print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  unvisible: ",self.unvisible_area, "  epsilon: ",self.epsilon)
                 break
 
             if reward == 10:
@@ -335,13 +357,14 @@ class Agent:
 
                 self.Y.append(self.y_step)
                 arw = self.get_areareward(self.current_state)
-                print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  unvisible: ",self.unvisible_area)
+                print("Episode : " ,episode, "   area : ",self.area, "  REWARD: ",reward, "  unvisible: ",self.unvisible_area, "  epsilon: ",self.epsilon)
                 break
-
+            
         
 
     def inference(self):
         
+        print(self.raycast_list[8][8])
         state = self.start_position
         res = [state]
         for i in range(100):
@@ -364,6 +387,12 @@ if __name__ == "__main__":
 
     agent = Agent()
     learn = True
+    for i in range(15):
+        agent.current_state = (i,0)
+        uva = agent.raycast()
+        print(i," - ",uva)
+    
+    time.sleep(10)
     for episode in range(agent.episodes):
         
         # RESET
@@ -371,7 +400,7 @@ if __name__ == "__main__":
         agent.reset(episode)
         # if episode % 5000 == 1:
         #     agent.inference()
-        print("Episode : " ,episode, "   area : ",agent.area, "  REWARD: ",agent.get_reward(agent.current_state), " epsilon: ",agent.epsilon)
+        # print("Episode : " ,episode, "   area : ",agent.area, "  REWARD: ",agent.get_reward(agent.current_state), " epsilon: ",agent.epsilon)
         agent.run(episode)
 
 
