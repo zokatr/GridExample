@@ -67,7 +67,7 @@ if __name__ == "__main__":
     #     for value in row:
     #         print(value, end=" ")
     #     print()
-    time.sleep(10)
+    # time.sleep(10)
 
     while running:
 
@@ -77,8 +77,8 @@ if __name__ == "__main__":
                 running = False
 
         # Choose Action
-        # a_index = agent.policy[vehicle.rect.x//GRID_SIZE][vehicle.rect.y//GRID_SIZE]
-        # next_state = agent.action_result(a_index, agent.current_state)
+        a_index = agent.policy[vehicle.rect.x//GRID_SIZE][vehicle.rect.y//GRID_SIZE]
+        next_state = agent.action_result(a_index, agent.current_state)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             a_index=2
@@ -88,8 +88,8 @@ if __name__ == "__main__":
             a_index=1#0
         elif keys[pygame.K_DOWN]:
             a_index=0#1
-        else:
-            a_index=-1
+        # else:
+        #     a_index=-1
 
         if a_index>-1:
             vehicle.update(a_index, grid) #env.step(action)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         new_observation, reward, done = vehicle.get_state(agent.stone_list, vehicle.rect, agent.area)
         # Render Game
         screen.fill(WHITE)
-        # vehicle.draw_path(screen)
+        vehicle.draw_path(screen)
         vehicle.draw_fov(screen, grid, obstacles)
         all_sprites.draw(screen)
       
@@ -108,12 +108,12 @@ if __name__ == "__main__":
             agent.reset(1)
             vehicle.reset()
 
-        print("vehicle.rect    : ",vehicle.rect.x, " , ",vehicle.rect.y)
-        print("vehicle.rect    : ",vehicle.rect.x//GRID_SIZE, " , ",vehicle.rect.y//GRID_SIZE)
-        print("unvisible area  : ",vehicle.unvisible_area)
-        print("raycast_list    : ",agent.raycast_list[vehicle.rect.x//GRID_SIZE][vehicle.rect.y//GRID_SIZE])
-        print("raycast_list    : ",agent.raycast_list[agent.current_state[0]][agent.current_state[1]])
-        print()
+        # print("vehicle.rect    : ",vehicle.rect.x, " , ",vehicle.rect.y)
+        # print("vehicle.rect    : ",vehicle.rect.x//GRID_SIZE, " , ",vehicle.rect.y//GRID_SIZE)
+        # print("unvisible area  : ",vehicle.unvisible_area)
+        # print("raycast_list    : ",agent.raycast_list[vehicle.rect.x//GRID_SIZE][vehicle.rect.y//GRID_SIZE])
+        # print("raycast_list    : ",agent.raycast_list[agent.current_state[0]][agent.current_state[1]])
+        # print()
         pygame.display.flip()
         clock.tick(10)
 

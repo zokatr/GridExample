@@ -15,9 +15,9 @@ class Agent:
         self.C = []
         self.Y = []
         self.area = 1
-        self.alpha = 0.9
-        self.gamma = 0.7
-        self.epsilon0 = 1.1
+        self.alpha = 0.8#0.9
+        self.gamma = 0.5#0.7
+        self.epsilon0 = 10.3#5.1
         self.episodes = 5000
         self.success_episode = 0
         self.sum_reward_list = []
@@ -30,7 +30,7 @@ class Agent:
         stone_list_1 = [(10, i) for i in range(15)]
         stone_list_2 = [(20, self.n-i) for i in range(10)]
         stone_list_3 = [(25, i) for i in range(20)]
-        self.stone_list = stone_list_1 + stone_list_2 + stone_list_3
+        self.stone_list = stone_list_1 + stone_list_2 #+ stone_list_3
         self.action = ["up", "down", "left", "right","left_up","left_down","right_up","right_down"]
         self.q_table = [[[0 for j in range(len(self.world))] for i in range(len(self.world))] for k in range(len(self.action))]
         self.policy = [[0 for j in range(len(self.world))] for i in range(len(self.world))]

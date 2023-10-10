@@ -266,7 +266,7 @@ class Vehicle(pygame.sprite.Sprite):
                     # cell = Cell(8,8)
                     # print("cell.rect.center: ",cell.rect.center)
                     hit_point = caster.cast_to_point([o.rect for o in obstacles], cell.rect.center)
-                    print(hit_point)
+                    # print(hit_point)
                     # time.sleep(1)
                     if hit_point:
                         cell.darken()
@@ -328,10 +328,10 @@ if __name__ == "__main__":
         # vehicle.draw_path(screen)
         all_sprites.draw(screen)
 
-        print("vehicle.rect    : ",vehicle.rect.x, " , ",vehicle.rect.y)
-        print("vehicle.rect    : ",vehicle.rect.x//GRID_SIZE, " , ",vehicle.rect.y//GRID_SIZE)
-        print("unvisible area  : ",vehicle.unvisible_area)
-        print()
+        # print("vehicle.rect    : ",vehicle.rect.x, " , ",vehicle.rect.y)
+        # print("vehicle.rect    : ",vehicle.rect.x//GRID_SIZE, " , ",vehicle.rect.y//GRID_SIZE)
+        # print("unvisible area  : ",vehicle.unvisible_area)
+        # print()
         pygame.display.flip()
         clock.tick(10)
 
